@@ -1,0 +1,35 @@
+#   n     = Number of states
+#   r     = Region of surrounding cells
+#   t     = Transition from a set of states, to another state  of the form   tn s() rm(countstate(), cellcount) s(p)   with n,m,p integers
+#   s     = indexing of a State in a transition  " t1 s(0,1,...,n)  ..."
+#   d     = Duration in number of generations required to satisfy the transition condition
+#   (x,y) = range of number of cells to satisfy the condition
+#   $     = Wildcard in ranges for "any number"
+#   ;     = Line break
+#   &     = requires both operand conditions to be satisfied, eg: r1s1(0) & r1s2(1)
+#   |     = requires at least one operand condition to be satisfied, eg: r1s1(1,$) | r2s1(3)
+#   #     = Comment line
+
+
+#   This format is meant to be parsed line by line
+
+#define state s0 and s1
+n2
+
+#define region r1 as Moore's neiborhood with relative x,y coordinates 
+r1 (-1,-1)  (-1,0)  (-1,1)  (0,-1)  (0,1)  (1,-1)  (1,0)  (1,1);
+
+#define transitions t1 as reproduction from state s0 satisfying conditions ... to state s1
+#if start state has multiple value "s(0,1,...,n)" then any of these value will count to satisfy the condition
+#wich is different from:
+#   t1 s(1) {r1( X )}     //transition iff there are X cells at s1
+#   t2 s(2) {r1( X )}     //transition iff there are X cells at s2
+#whereas:
+#   t1 s(1,2) {r1( X )}   //transition iff there are X cells of either s1 or s2
+#
+#   Condition form : {startStateIndex : regionIndex : stateCheckingIndexList : requiredNumberRange : endStateIndex}
+t1 {0:1:(1):3:1};          d1
+# t2 as underpopulation
+t2 s(1) r1s1(0,1) s(0);        d1
+# t3 as overpopulation
+t3 s(1) r1s1(3,$) s(0);        d1
