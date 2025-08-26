@@ -5,8 +5,9 @@
 #include <string>
 
 
-void                       removeWS(std::string& s);
-std::vector<std::string>   stringSplit(std::string s, char delimiter);
+void                        stringEraseWS(std::string& s);
+void                        stringEraseComment(std::string& s, char token);
+std::vector<std::string>    stringSplit(std::string s, char delimiter);
 
 class CAParser{
   public:
@@ -23,9 +24,9 @@ class CAParser{
     static void             parseRLE(std::string filepathRLE, CellGrid& grid);
     static void             parseCA(RuleSet& ruleset);
     static void             parseCA(std::string filepathCA, RuleSet& ruleset){m_filepathCA=filepathCA;parseCA(ruleset);}
-    static CARegion         parseRegion(std::string l);
+    static CARegion         parseRegion(std::string s);
     static glm::ivec2       parseVec(std::string s);
-    static CATransition     parseTransition(std::string l);
+    static CATransition     parseTransition(std::string s);
     static CACondition      parseCondition(std::string s);
 
   protected:

@@ -7,18 +7,18 @@
 #include <string>
 
 
-CARegion CAParser::parseRegion(std::string l){
+CARegion CAParser::parseRegion(std::string s){
   CARegion r;
-  int vecStart=l.find('(');
-  int vecEnd=l.find(')');
+  int vecStart=s.find('(');
+  int vecEnd=s.find(')');
   int nbCell=0;
   
   while(vecStart!=std::string::npos){
     nbCell++;
-    r.relativeCells.push_back(parseVec(l.substr(vecStart+1,vecEnd-vecStart-1)));
-    l.erase(vecStart,vecEnd-vecStart+1);
-    vecStart=l.find('(');
-    vecEnd=l.find(')');
+    r.relativeCells.push_back(parseVec(s.substr(vecStart+1,vecEnd-vecStart-1)));
+    s.erase(vecStart,vecEnd-vecStart+1);
+    vecStart=s.find('(');
+    vecEnd=s.find(')');
   }
   r.cellCount=nbCell;
   return r;
@@ -36,37 +36,52 @@ glm::ivec2 CAParser::parseVec(std::string s){
   return glm::ivec2(x,y);
 }
 
-CATransition CAParser::parseTransition(std::string l){
-  int i=l.find('s');
+CATransition CAParser::parseTransition(std::string s){
+  int i=s.find('s');
+  CATransition trans;
+  /*
   if(i==std::string::npos){
-    std::cout << "error while parsing transition (" << l << ")\n";
+    std::cout << "error while parsing transition (" << s << ")\n";
     return CATransition();
-  }
+  }*/
 
-  int defStart=l.find('{');
-  int defEnd=l.find('}');
+  int defStart=s.find('{');
+  int defEnd=s.find('}');
   if(defStart==std::string::npos){
-    std::cout << "error while parsing transition (" << l << ")\n";
+    std::cout << "error while parsing transition (" << s << ")\n";
     return CATransition();
   }
-  std::string sub=l.substr(defStart,defEnd-defStart-1);
-  if(sub.empty()){
-    return CAC_Always();
-  }
+  std::string sub=s.substr(defStart+1,defEnd-defStart-1);
+  trans.condition=parseCondition(sub);
 
-  return CATransition();
+  return trans;
 }
 
 CACondition CAParser::parseCondition(std::string s){
+  if(s.empty())
+    return CAC_Always();
   CACondition cond;
   auto args=stringSplit(s, ':');
-  if(args.size()!=5){
+  if(args.size()!=3){
     std::cout << "error while parsing Condition {" << s << "}\n";
-    return CACondition();
+    std::cout << "A condition requires either 0 or 3 arguments\n";
+    return cond;
   }
-  cond.startState=std::stoi(args[0]);
-  cond.region=std::stoi(args[1]);
-  cond.endState=std::stoi(args[4]);
+  cond.regionId=std::stoi(args[0]);
+  cond.stateId.push_back(std::stoi(args[1]));
+  int i=args[2].find('(');
+  int j=args[2].find(')');
+  if(i==std::string::npos || j==std::string::npos){
+    std::cout << "Error while parsing Condition {" <<s<<"}, requires range '(x,y)' as 3rd argument\n";
+    return cond;
+  }
+  auto range=stringSplit(args[2].substr(i+1,j-i-1), ',');
+  cond.lowBound=std::stoi(range[0]);
+  if(range[1]=="$")
+    cond.highBound=m_ruleset->regions[cond.regionId].cellCount;
+  else
+   cond.highBound=std::stoi(range[1]);
+  return cond;
 }
 
 void CAParser::parseCA(RuleSet& ruleset){
@@ -80,15 +95,16 @@ void CAParser::parseCA(RuleSet& ruleset){
 
   std::string l;
   while(std::getline(f, l)){
+    stringEraseComment(l, '#');
     if(l.empty())
       continue;
-    removeWS(l);
+    stringEraseWS(l);
     switch(l.at(0)){
-      case '#':
-        continue;
+      //case '#':
+      //  continue;
       case 'n':
         l.erase(0,1);
-        ruleset.nbState=std::stoi(l);
+        ruleset.stateCount=std::stoi(l);
         break;
       case 'r':
         ruleset.regions.push_back(parseRegion(l));
@@ -103,12 +119,18 @@ void CAParser::parseCA(RuleSet& ruleset){
   m_ruleset=NULL;
 }
 
-void removeWS(std::string& s){
+void stringEraseWS(std::string& s){
   int i=s.find(' ');
   while(i!=std::string::npos){
     s.erase(i,1);
     i=s.find(' ');
   }
+}
+
+void stringEraseComment(std::string& s, char token){
+  int i=s.find(token);
+  if(i!=std::string::npos)
+    s.erase(i);
 }
 
 std::vector<std::string> stringSplit(std::string s, char delimiter){

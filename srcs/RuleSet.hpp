@@ -7,12 +7,13 @@ enum RangePointer{
 };
 
 struct CACondition{
-  bool virtual      satisfy();
-  int               regionId;
+  bool virtual      satisfy(){return true;}
+  int               regionId=-1;
+  int               lowBound=-1;
+  int               highBound=-1;
   std::vector<int>  stateId;
-  int               lowBound;
-  int               highBound;
 };
+
 struct CAC_Always: CACondition{
   bool satisfy() override{return true;}
 };

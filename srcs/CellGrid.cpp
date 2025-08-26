@@ -21,7 +21,7 @@ CellGrid::CellGrid(int width, int height){
     }
   }
   RuleSet rs;
-  CAParser::parseCA("./testRule.ca", rs);
+  CAParser::parseCA("./wireworld.ca", rs);
 
   std::string s="";
   auto a=stringSplit(s, 'a');
