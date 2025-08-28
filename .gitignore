@@ -59,6 +59,7 @@ vcpkg_installed/
 statorEditor
 
 #life_patterns/
+leakCheck.sh
 
 lib/
 

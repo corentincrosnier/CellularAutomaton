@@ -2,6 +2,7 @@
 #include "CellGrid.hpp"
 #include "RuleSet.hpp"
 #include <iostream>
+#include <memory>
 #include <string>
 
 
@@ -21,15 +22,16 @@ class CAParser{
     }
     */
 
-    static void             parseRLE(std::string filepathRLE, CellGrid& grid);
-    static void             parseCA(RuleSet& ruleset);
-    static void             parseCA(std::string filepathCA, RuleSet& ruleset){m_filepathCA=filepathCA;parseCA(ruleset);}
-    static CARegion         parseRegion(std::string s);
-    static glm::ivec2       parseVec(std::string s);
-    static CATransition     parseTransition(std::string s);
-    static CACondition      parseCondition(std::string s);
+    static void                                 parseRLE(std::string filepathRLE, CellGrid& grid);
+    static void                                 parseCA(RuleSet& ruleset);
+    static std::shared_ptr<RuleSet>             parseCA();
+    static std::shared_ptr<RuleSet>             parseCA(std::string filepathCA){m_filepathCA=filepathCA;return parseCA();}
+    static CARegion                             parseRegion(std::string s);
+    static glm::ivec2                           parseVec(std::string s);
+    static CATransition                         parseTransition(std::string s);
+    static CACondition                          parseCondition(std::string s);
 
   protected:
-    inline static std::string   m_filepathCA;
-    inline static RuleSet*      m_ruleset;
+    inline static std::string                   m_filepathCA;
+    inline static std::shared_ptr<RuleSet>      m_ruleset;
 };

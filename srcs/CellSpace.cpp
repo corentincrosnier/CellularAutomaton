@@ -55,21 +55,21 @@ void CellSpace::destroy(){
 }
 
 HephResult  CellSpace::cmdBufferRecord(VkCommandBuffer& cmdBuffer, VkViewport& viewport){
-  if(!drawCellGrid())
-    return HephResult();
-  vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineTri);
-  vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
   VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferTri.buffer, offsets);
-  vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferTri.buffer, 0, VK_INDEX_TYPE_UINT32);
-  vkCmdDrawIndexed(cmdBuffer, m_indicesTri.size(), 1, 0, 0, 0);
-
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLine);
 
   vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferLine.buffer, offsets);
   vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferLine.buffer, 0, VK_INDEX_TYPE_UINT32);
   vkCmdDrawIndexed(cmdBuffer, m_indicesLine.size(), 1, 0, 0, 0);
+
+  if(!drawCellGrid())
+    return HephResult();
+  vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineTri);
+  vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+
+  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferTri.buffer, offsets);
+  vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferTri.buffer, 0, VK_INDEX_TYPE_UINT32);
+  vkCmdDrawIndexed(cmdBuffer, m_indicesTri.size(), 1, 0, 0, 0);
 
   return HephResult();
 }

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <glm/fwd.hpp>
 #include <iostream>
+#include <memory>
 #include <string>
 
 
@@ -51,15 +52,24 @@ CATransition CAParser::parseTransition(std::string s){
     std::cout << "error while parsing transition (" << s << ")\n";
     return CATransition();
   }
+  trans.stateStartId=std::stoi(s.substr(1,defStart-1));
+  trans.stateEndId=std::stoi(s.substr(defEnd+1,s.size()-defEnd-1));
   std::string sub=s.substr(defStart+1,defEnd-defStart-1);
-  trans.condition=parseCondition(sub);
+  if(sub.empty()){
+    trans.condition=CAC_Always();
+    trans.always=true;
+  }
+  else
+    trans.condition=parseCondition(sub);
 
   return trans;
 }
 
 CACondition CAParser::parseCondition(std::string s){
-  if(s.empty())
+  if(s.empty()){
+    std::cout<<"condition {"<<s<<"} will always be satisfied\n";
     return CAC_Always();
+  }
   CACondition cond;
   auto args=stringSplit(s, ':');
   if(args.size()!=3){
@@ -67,7 +77,7 @@ CACondition CAParser::parseCondition(std::string s){
     std::cout << "A condition requires either 0 or 3 arguments\n";
     return cond;
   }
-  cond.regionId=std::stoi(args[0]);
+  cond.region=std::make_shared<CARegion>(m_ruleset->regions[std::stoi(args[0])]);
   cond.stateId.push_back(std::stoi(args[1]));
   int i=args[2].find('(');
   int j=args[2].find(')');
@@ -77,20 +87,21 @@ CACondition CAParser::parseCondition(std::string s){
   }
   auto range=stringSplit(args[2].substr(i+1,j-i-1), ',');
   cond.lowBound=std::stoi(range[0]);
-  if(range[1]=="$")
-    cond.highBound=m_ruleset->regions[cond.regionId].cellCount;
+  if(range.size()==1)
+    cond.highBound=cond.lowBound;
+  else if(range[1]=="$")
+    cond.highBound=cond.region->cellCount;
   else
    cond.highBound=std::stoi(range[1]);
   return cond;
 }
 
-void CAParser::parseCA(RuleSet& ruleset){
-  m_ruleset=&ruleset;
+std::shared_ptr<RuleSet> CAParser::parseCA(){
+  m_ruleset=std::make_shared<RuleSet>();
   std::ifstream f(m_filepathCA);
   if(!f.is_open()){
     std::cout << "couldn't open " << m_filepathCA << " for CAParser, aborting\n";
-    m_ruleset=NULL;
-    return;
+    return nullptr;
   }
 
   std::string l;
@@ -104,19 +115,19 @@ void CAParser::parseCA(RuleSet& ruleset){
       //  continue;
       case 'n':
         l.erase(0,1);
-        ruleset.stateCount=std::stoi(l);
+        m_ruleset->stateCount=std::stoi(l);
         break;
       case 'r':
-        ruleset.regions.push_back(parseRegion(l));
+        m_ruleset->regions.push_back(parseRegion(l));
         break;
       case 't':
-        ruleset.transitions.push_back(parseTransition(l));
+        m_ruleset->transitions.push_back(parseTransition(l));
         break;
     }
     std::cout << l << std::endl;
   }
   f.close();
-  m_ruleset=NULL;
+  return m_ruleset;
 }
 
 void stringEraseWS(std::string& s){

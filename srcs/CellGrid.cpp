@@ -2,6 +2,7 @@
 #include "CAParser.hpp"
 #include "RuleSet.hpp"
 #include <algorithm>
+#include <boost/json/kind.hpp>
 #include <cctype>
 #include <cstdio>
 #include <fstream>
@@ -10,27 +11,28 @@
 #include <string>
 #include <vector>
 
-
+#define WIDTH   80
+#define HEIGHT  45
 
 CellGrid::CellGrid(int width, int height){
-  m_width=width;
-  m_height=height;
-  for(int j=0;j<height;j++){
-    for(int i=0;i<width;i++){
+  //m_width=width;
+  //m_height=height;
+  m_width=WIDTH;
+  m_height=HEIGHT;
+  for(int j=0;j<m_height;j++){
+    for(int i=0;i<m_width;i++){
       m_cells.push_back(Cell(i,j));
     }
   }
-  RuleSet rs;
-  CAParser::parseCA("./wireworld.ca", rs);
-
-  std::string s="";
-  auto a=stringSplit(s, 'a');
-  for(auto d:a)std::cout<<d<<std::endl;
+  //setState(8, 4 , 1);
+  m_ruleset=CAParser::parseCA("./gol.ca");
+  loadRLEat(0, 0, "./life_patterns/newgun.rle");
+  loadRLEat(40, 10, "./life_patterns/34p20.rle");
 }
 
-void CellGrid::setState(int x, int y, CellState state){
+void CellGrid::setState(int x, int y, int state){
   auto it=std::find(m_liveCells.begin(), m_liveCells.end(), glm::ivec2(x,y));
-  if(it==m_liveCells.end() && state==CELL_STATE_1){
+  if(it==m_liveCells.end() && state>0){
     m_liveCells.push_back(glm::ivec2(x,y));
   }
   else if(it!=m_liveCells.end() && state==CELL_STATE_0){
@@ -71,7 +73,7 @@ void CellGrid::loadRLEat(int x, int y, std::string rlepath){
         _y+=tmp;
         continue;
       }
-      CellState state=(c=='b')?CELL_STATE_0:CELL_STATE_1;
+      int state=(c=='b')?CELL_STATE_0:CELL_STATE_1;
       for(int i=ind;i<ind+tmp;i++){
         setState(x+_x, y+_y, state);
         _x++;
@@ -101,13 +103,62 @@ void CellGrid::loadRLEat(int x, int y, std::string rlepath){
 }
 
 void CellGrid::nextGen(){
-  std::cout << "calc next gen\n";
+  std::cout << "calc next gen using ruleset wireworld\n";
   m_prevCells=m_cells;
 
-  for(auto& c: m_cells){
-    applyRuleSet(c, m_prevCells);
+  if(m_ruleset!=nullptr){
+    for(auto& c: m_cells)
+      applyRuleSet(c, m_prevCells, *m_ruleset);
+  }
+  else{
+    for(auto& c: m_cells)
+      applyRuleSet(c, m_prevCells);
   }
   m_genCount++;
+}
+
+void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, RuleSet& ruleset){
+  //std::cout << "applyRuleSet\n";
+  std::cout<<"applying ruleset to cell: ("<<cell.pos.x<<","<<cell.pos.y<<")\n";
+  std::vector<int> tally;
+  for(int i=0;i<ruleset.stateCount;i++){
+    tally.push_back(0);
+  }
+  std::cout << "tally size: "<<tally.size()<<std::endl;
+
+  int i=0;
+  for(auto& r: ruleset.regions){
+    std::cout<<"start tally region: "<<i<<std::endl;
+    for(auto& rel: r.relativeCells){
+      int x=cell.pos.x + rel.x;
+      int y=cell.pos.y + rel.y;
+      std::cout<<"checking cell: ("<<x<<","<<y<<")\n";
+      if(x<0 || x>=m_width || y<0 || y>=m_height){
+        tally[0]++;
+        continue;
+      }
+      tally[grid[y*m_width+x].state]++;
+    }
+  }
+
+  i=0;
+  for(auto t: tally)
+    std::cout<<"tally["<<i<<"] = "<<t<<std::endl;
+
+  for(auto& t: ruleset.transitions){
+    if(cell.state!=t.stateStartId)
+      continue;
+    if(t.satisfy(tally)){
+      std::cout << "cell satisfied for transition, state set to: "<<t.stateEndId<<std::endl;
+      //cell.state=t.stateEndId;
+      setState(cell.pos.x, cell.pos.y, t.stateEndId);
+      //TODO--------------------- method void updateLiveCells(Cell& cell)
+      //if(cell.state==0)
+      //  m_liveCells.erase(std::find(m_liveCells.begin(), m_liveCells.end(), cell.pos));
+      break;
+    }
+
+  }
 }
 
 void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, int range){
@@ -158,23 +209,22 @@ void CellGrid::activateCell(int x, int y){
 void CellGrid::switchCell(int x, int y){
   int ind=y*m_width+x;
   Cell& c=m_cells[ind];
-  if(c.state==CELL_STATE_1){
-    c.state=CELL_STATE_0;
-    m_liveCells.erase(std::find(m_liveCells.begin(), m_liveCells.end(), c.pos));
-  }
-  else{
-    c.state=CELL_STATE_1;
+  int prevState=c.state;
+  c.state=(c.state+1)%m_ruleset->stateCount;
+  if(prevState==0 && c.state!=0)
     m_liveCells.push_back(c.pos);
-  }
+  else if(prevState!=0 && c.state==0)
+    m_liveCells.erase(std::find(m_liveCells.begin(), m_liveCells.end(), c.pos));
 }
 
 void CellGrid::drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri, int x, int y){
   float cellH=2.0/m_height;
   float cellW=2.0/m_width;
   int nbVertex=verticesTri.size();
+  int st=m_cells[y*m_width+x].state;
   Vertex v={
     .pos=glm::vec2(x*cellW-1,y*cellH-1),
-    .color=glm::vec3(0.6,0.8,0.5)
+    .color=glm::vec3(0.3+st*0.2,0.3+st*0.2,0.3+st*0.2)
   };
   //std::cout << x << " , " << y << std::endl << cellSize << " : " << nbVertex << std::endl;
   verticesTri.push_back(v);

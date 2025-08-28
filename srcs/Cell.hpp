@@ -3,19 +3,21 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
+#include <memory>
 
-
-enum CellState{
-  CELL_STATE_0,
-  CELL_STATE_1
-};
+#define CELL_STATE_0 0
+#define CELL_STATE_1 1
+#define CELL_STATE_2 2
+#define CELL_STATE_3 3
+#define CELL_STATE_4 4
+#define CELL_STATE_5 5
 
 struct Cell{
-  Cell(int x, int y, CellState state=CELL_STATE_0){
+  Cell(int x, int y, int state=CELL_STATE_0){
     pos=glm::ivec2(x,y);
     this->state=state;
   }
 
-  CellState   state;
+  int         state;
   glm::ivec2  pos;
 };

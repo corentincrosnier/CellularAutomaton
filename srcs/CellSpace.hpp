@@ -12,7 +12,7 @@ class CellSpace{
   public:
     CellSpace(){
       m_cellgrid=CellGrid(160,90);
-      m_cellgrid.loadRLEat(0, 0, "./life_patterns/newgun.rle");
+      //m_cellgrid.loadRLEat(0, 0, "./life_patterns/newgun.rle");
     }
 
     bool        drawCellGrid();
