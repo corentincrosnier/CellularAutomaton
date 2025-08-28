@@ -48,7 +48,8 @@ void  HephGui::callbackKey(GLFWwindow* window, int key, int scancode, int action
   }
 
   if (key == GLFW_KEY_B && action == GLFW_PRESS) {
-    m_cellspace.getGrid().benchmark(20);
+    m_cellspace.getGrid().benchmark(m_time, 200, "./gol160-90.bench");
+    m_cellspace.setAutoGen(true);
   }
   if (key == GLFW_KEY_D && action == GLFW_PRESS) {
     m_cellspace.getGrid().toggleShowInfo();

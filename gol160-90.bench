@@ -1,0 +1,92 @@
+-------------------------------------------------------------
+Benchmark on 20 frames
+Elapsed time: 1.74772 seconds
+
+fps:                    ~26.104
+gen count:               20
+gen period:             ~0.0430374
+grid size:               14400
+cell count:             ~139
+period per cell:        ~0.00298871 milliseconds
+period per live cell:   ~0.312179 milliseconds
+
+-------------------------------------------------------------
+Benchmark on 200 frames
+Elapsed time: 10.6862 seconds
+
+fps:                    ~21.9733
+gen count:               200
+gen period:             ~0.0498499
+grid size:               14400
+cell count:             ~146
+period per cell:        ~0.0034618 milliseconds
+period per live cell:   ~0.346484 milliseconds
+
+-------------------------------------------------------------
+Benchmark on 200 frames on the 1756388374
+Elapsed time: 10.0151 seconds
+
+fps:                    ~20.7966
+gen count:               200
+gen period:             ~0.04859 seconds
+grid size:               14400
+cell count:             ~146
+period per cell:        ~0.00337431 milliseconds
+period per live cell:   ~0.338104 milliseconds
+
+-------------------------------------------------------------
+Benchmark on 200 frames on the Thu Aug 28 15:40:44 2025
+
+Elapsed time: 9.72506 seconds
+
+fps:                    ~20.7165
+gen count:               200
+gen period:             ~0.0486471 seconds
+grid size:               14400
+cell count:             ~146
+period per cell:        ~0.00337827 milliseconds
+period per live cell:   ~0.338499 milliseconds
+
+-------------------------------------------------------------
+Benchmark on 200 frames
+Date and time: Thu Aug 28 15:42:05 2025
+
+Elapsed time: 10.2619 seconds
+
+fps:                    ~20.7221
+gen count:               200
+gen period:             ~0.048666 seconds
+grid size:               14400
+cell count:             ~146
+period per cell:        ~0.00337958 milliseconds
+period per live cell:   ~0.338331 milliseconds
+
+-------------------------------------------------------------
+Benchmark on 200 frames
+Date and time: Thu Aug 28 15:45:06 2025
+
+Elapsed time: 10.5645 seconds
+
+fps:                    ~21.158
+gen count:               200
+gen period:             ~0.0490651 seconds
+grid size:               14400
+cell count:             ~146
+period per cell:        ~0.0034073 milliseconds
+period per live cell:   ~0.341203 milliseconds
+
+-------------------------------------------------------------
+Benchmark on 200 frames
+Date and time: Thu Aug 28 15:46:42 2025
+
+Elapsed time: 9.7753 seconds
+
+gen count:               200
+grid size:               14400
+cell count:             ~146
+
+fps:                    ~20.8246
+gen period:             ~0.0484078 seconds
+period per cell:        ~0.00336165 milliseconds
+period per live cell:   ~0.336601 milliseconds
+

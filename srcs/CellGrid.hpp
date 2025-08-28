@@ -12,6 +12,22 @@ struct Vertex{
   glm::vec3 color;
 };
 
+struct Bench{
+  int           startBenchTime=0;
+  int           frame=0;
+  int           nbFrame=0;
+  std::string   filePath="";
+  bool          active=false;
+
+  int           gridSize=0;
+  double        fps;
+  double        genPeriod;
+  int           genCount;
+  int           cellCount;
+  double        periodPerCell;
+  double        periodPerLiveCell;
+};
+
 class CellGrid{
 
   public:
@@ -28,7 +44,8 @@ class CellGrid{
     void                drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri, int x, int y);
     void                drawInfo(double& time, double& prevTime);
     void                toggleShowInfo(){m_showInfo=(m_showInfo)?false:true;}
-    void                benchmark(int nbFrame);
+    void                benchmark(double& time, int nbFrame, std::string benchFilePath="");
+    void                benchAddFrame(double& time, double& prevTime);
 
     void                loadRLEat(int x, int y, std::string rlepath);
     std::vector<Cell>   copy(glm::ivec2 pos, int range);
@@ -42,8 +59,8 @@ class CellGrid{
     void                switchCell(int x, int y);
 
   protected:
-    bool                              m_showInfo=true;
-    int                               m_benchFrame=0;
+    Bench                             m_bench;
+    bool                              m_showInfo=false;
     int                               m_width=100;
     int                               m_height=100;
     int                               m_genCount=0;

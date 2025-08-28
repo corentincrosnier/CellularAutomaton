@@ -1,11 +1,13 @@
 #include "CellGrid.hpp"
 #include "CAParser.hpp"
+#include "Cell.hpp"
 #include "RuleSet.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <boost/json/kind.hpp>
 #include <cctype>
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <glm/fwd.hpp>
 #include <hephaestus/memory/hephMemoryAllocator.hpp>
@@ -18,29 +20,65 @@
 #define HEIGHT  90
 
 
-void CellGrid::benchmark(int nbFrame){
-  m_benchFrame=nbFrame;
-  m_showInfo=true;
+void CellGrid::benchmark(double& time, int nbFrame, std::string benchFilePath){
+  if(m_bench.active){
+    std::cout << "Another benchmark still in progress." << std::endl;
+    return;
+  }
+  m_bench.filePath=benchFilePath;
+  m_bench.nbFrame=nbFrame;
+  m_bench.frame=nbFrame;
+  m_bench.startBenchTime=time;
+  m_bench.fps=0;
+  m_bench.gridSize=m_cells.size();
+  m_bench.cellCount=0;
+  m_bench.genCount=0;
+  m_bench.genPeriod=0;
+  m_bench.periodPerCell=0;
+  m_bench.periodPerLiveCell=0;
+  m_bench.active=true;
   std::cout<<"benchmark "<<nbFrame<<" frames...\n";
 }
 
+void CellGrid::benchAddFrame(double& _time, double& prevTime){
+  double delta=_time-prevTime;
+  m_bench.cellCount+=m_liveCells.size();
+  m_bench.genCount++;
+  m_bench.fps+=1/delta;
+  m_bench.genPeriod+=delta;
+  m_bench.periodPerCell+=1000*delta/m_bench.gridSize;
+  m_bench.periodPerLiveCell+=1000*delta/m_liveCells.size();
+  m_bench.frame--;
+  if(m_bench.frame<=0){
+    std::ofstream benchOut(m_bench.filePath, std::ofstream::app);
+    if(benchOut.is_open()){
+      time_t ts=time(NULL);
+      benchOut<<"-------------------------------------------------------------\n";
+      benchOut<<"Benchmark on "<<m_bench.nbFrame<<" frames\n";
+      benchOut<<"Date and time: "<<ctime(&ts)<<"\n";
+      benchOut<<"Elapsed time: "<<_time-m_bench.startBenchTime<<" seconds\n";
+      benchOut<<std::endl;
+      benchOut<<"gen count:               "<<m_bench.genCount<<"\n";
+      benchOut<<"grid size:               "<<m_bench.gridSize<<"\n";
+      benchOut<<"cell count:             ~"<<m_bench.cellCount/m_bench.nbFrame<<"\n";
+      benchOut<<std::endl;
+      benchOut<<"fps:                    ~"<<m_bench.fps/m_bench.nbFrame<<"\n";
+      benchOut<<"gen period:             ~"<<m_bench.genPeriod/m_bench.nbFrame<<" seconds\n";
+      benchOut<<"period per cell:        ~"<<m_bench.periodPerCell/m_bench.nbFrame<<" milliseconds\n";
+      benchOut<<"period per live cell:   ~"<<m_bench.periodPerLiveCell/m_bench.nbFrame<<" milliseconds\n";
+      benchOut<<std::endl;
+    }
+    benchOut.close();
+    std::cout << "Benchmark done.\n";
+    m_bench.active=false;
+  }
+}
+
 void CellGrid::drawInfo(double& time, double& prevTime){
+  if(m_bench.active)
+    benchAddFrame(time,prevTime);
   if(!m_showInfo)
     return;
-  if(m_benchFrame>0){
-    m_benchFrame--;
-    if(m_benchFrame==0){
-      std::cout<<"fps: "<< 1/(time-prevTime)<<std::endl;
-      std::cout<<"genPeriod: "<< (time-prevTime)<< " s"<<std::endl;
-      std::cout<<"genCount: "<< m_genCount<<std::endl;
-      std::cout<<"gridSize: "<< (int)m_cells.size()<<std::endl;
-      std::cout<<"cellCount: "<< (int)m_liveCells.size()<<std::endl;
-      std::cout<<"periodPerCell: "<< 1000*(time-prevTime)/m_cells.size()<< " ms"<<std::endl;
-      std::cout<<"periodPerLiveCell: "<< 1000*(time-prevTime)/m_liveCells.size()<< " ms"<<std::endl;
-      std::cout<<"----------------------------------------------------------------------\n";
-      m_showInfo=false;
-    }
-  }
   ImGui::Text("fps: %f", 1/(time-prevTime));
   ImGui::Text("genPeriod: %f%s", (time-prevTime), " s");
   ImGui::Text("genCount: %i", m_genCount);

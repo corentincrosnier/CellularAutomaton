@@ -33,7 +33,7 @@ glm::ivec2 CAParser::parseVec(std::string s){
   }
   int x=std::stoi(s.substr(0,i));
   int y=std::stoi(s.substr(i+1,s.size()-i-1));
-  std::cout << x << "," << y << std::endl;
+  //std::cout << x << "," << y << std::endl;
   return glm::ivec2(x,y);
 }
 
@@ -124,7 +124,7 @@ std::shared_ptr<RuleSet> CAParser::parseCA(){
         m_ruleset->transitions.push_back(parseTransition(l));
         break;
     }
-    std::cout << l << std::endl;
+    //std::cout << l << std::endl;
   }
   f.close();
   return m_ruleset;

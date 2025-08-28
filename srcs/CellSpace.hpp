@@ -21,6 +21,7 @@ class CellSpace{
     CellGrid&   getGrid(){return m_cellgrid;}
     void        destroy();
     void        toggleAutoGen(){m_autoGen=(m_autoGen)?false:true;}
+    void        setAutoGen(bool autogen){m_autoGen=autogen;}
 
   protected:
     
