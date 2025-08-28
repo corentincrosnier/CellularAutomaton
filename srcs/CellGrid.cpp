@@ -1,6 +1,7 @@
 #include "CellGrid.hpp"
 #include "CAParser.hpp"
 #include "RuleSet.hpp"
+#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <boost/json/kind.hpp>
 #include <cctype>
@@ -10,9 +11,44 @@
 #include <hephaestus/memory/hephMemoryAllocator.hpp>
 #include <string>
 #include <vector>
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 
-#define WIDTH   80
-#define HEIGHT  45
+#define WIDTH   160
+#define HEIGHT  90
+
+
+void CellGrid::benchmark(int nbFrame){
+  m_benchFrame=nbFrame;
+  m_showInfo=true;
+  std::cout<<"benchmark "<<nbFrame<<" frames...\n";
+}
+
+void CellGrid::drawInfo(double& time, double& prevTime){
+  if(!m_showInfo)
+    return;
+  if(m_benchFrame>0){
+    m_benchFrame--;
+    if(m_benchFrame==0){
+      std::cout<<"fps: "<< 1/(time-prevTime)<<std::endl;
+      std::cout<<"genPeriod: "<< (time-prevTime)<< " s"<<std::endl;
+      std::cout<<"genCount: "<< m_genCount<<std::endl;
+      std::cout<<"gridSize: "<< (int)m_cells.size()<<std::endl;
+      std::cout<<"cellCount: "<< (int)m_liveCells.size()<<std::endl;
+      std::cout<<"periodPerCell: "<< 1000*(time-prevTime)/m_cells.size()<< " ms"<<std::endl;
+      std::cout<<"periodPerLiveCell: "<< 1000*(time-prevTime)/m_liveCells.size()<< " ms"<<std::endl;
+      std::cout<<"----------------------------------------------------------------------\n";
+      m_showInfo=false;
+    }
+  }
+  ImGui::Text("fps: %f", 1/(time-prevTime));
+  ImGui::Text("genPeriod: %f%s", (time-prevTime), " s");
+  ImGui::Text("genCount: %i", m_genCount);
+  ImGui::Text("gridSize: %i", (int)m_cells.size());
+  ImGui::Text("cellCount: %i", (int)m_liveCells.size());
+  ImGui::Text("periodPerCell: %f%s",1000*(time-prevTime)/m_cells.size(), " ms");
+  ImGui::Text("periodPerLiveCell: %f%s",1000*(time-prevTime)/m_liveCells.size(), " ms");
+}
 
 CellGrid::CellGrid(int width, int height){
   //m_width=width;
@@ -103,7 +139,7 @@ void CellGrid::loadRLEat(int x, int y, std::string rlepath){
 }
 
 void CellGrid::nextGen(){
-  std::cout << "calc next gen using ruleset wireworld\n";
+  //std::cout << "calc next gen using ruleset wireworld\n";
   m_prevCells=m_cells;
 
   if(m_ruleset!=nullptr){
@@ -119,20 +155,20 @@ void CellGrid::nextGen(){
 
 void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, RuleSet& ruleset){
   //std::cout << "applyRuleSet\n";
-  std::cout<<"applying ruleset to cell: ("<<cell.pos.x<<","<<cell.pos.y<<")\n";
+  //std::cout<<"applying ruleset to cell: ("<<cell.pos.x<<","<<cell.pos.y<<")\n";
   std::vector<int> tally;
   for(int i=0;i<ruleset.stateCount;i++){
     tally.push_back(0);
   }
-  std::cout << "tally size: "<<tally.size()<<std::endl;
+  //std::cout << "tally size: "<<tally.size()<<std::endl;
 
   int i=0;
   for(auto& r: ruleset.regions){
-    std::cout<<"start tally region: "<<i<<std::endl;
+    //std::cout<<"start tally region: "<<i<<std::endl;
     for(auto& rel: r.relativeCells){
       int x=cell.pos.x + rel.x;
       int y=cell.pos.y + rel.y;
-      std::cout<<"checking cell: ("<<x<<","<<y<<")\n";
+      //std::cout<<"checking cell: ("<<x<<","<<y<<")\n";
       if(x<0 || x>=m_width || y<0 || y>=m_height){
         tally[0]++;
         continue;
@@ -141,15 +177,16 @@ void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, RuleSet& ruleset
     }
   }
 
+  /*
   i=0;
   for(auto t: tally)
     std::cout<<"tally["<<i<<"] = "<<t<<std::endl;
-
+  */
   for(auto& t: ruleset.transitions){
     if(cell.state!=t.stateStartId)
       continue;
     if(t.satisfy(tally)){
-      std::cout << "cell satisfied for transition, state set to: "<<t.stateEndId<<std::endl;
+      //std::cout << "cell satisfied for transition, state set to: "<<t.stateEndId<<std::endl;
       //cell.state=t.stateEndId;
       setState(cell.pos.x, cell.pos.y, t.stateEndId);
       //TODO--------------------- method void updateLiveCells(Cell& cell)

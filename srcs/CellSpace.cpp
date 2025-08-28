@@ -57,6 +57,7 @@ void CellSpace::destroy(){
 HephResult  CellSpace::cmdBufferRecord(VkCommandBuffer& cmdBuffer, VkViewport& viewport){
   VkDeviceSize offsets[] = {0};
   vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLine);
+  vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 
   vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferLine.buffer, offsets);
   vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferLine.buffer, 0, VK_INDEX_TYPE_UINT32);

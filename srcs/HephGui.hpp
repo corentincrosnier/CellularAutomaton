@@ -59,6 +59,7 @@ class	  HephGui {
     HephResult		renderGui();
 		
     void					drawTopBar();
+    void					drawCAInfo();
 
 		GLFWwindow*		m_mainWindow;
     int						m_width, m_height;
@@ -67,6 +68,8 @@ class	  HephGui {
 		bool					m_quit = false;
 		double				m_framerate = FRAMERATE;
 		
+    double        m_time=0;
+    double        m_prevTime=0;
 		bool					m_showTopBar = false;
 		GuiWindowInfo	m_windowInfoTopBar;
 

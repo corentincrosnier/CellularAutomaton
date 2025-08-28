@@ -26,6 +26,9 @@ class CellGrid{
 
     void                draw(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri);
     void                drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri, int x, int y);
+    void                drawInfo(double& time, double& prevTime);
+    void                toggleShowInfo(){m_showInfo=(m_showInfo)?false:true;}
+    void                benchmark(int nbFrame);
 
     void                loadRLEat(int x, int y, std::string rlepath);
     std::vector<Cell>   copy(glm::ivec2 pos, int range);
@@ -39,6 +42,8 @@ class CellGrid{
     void                switchCell(int x, int y);
 
   protected:
+    bool                              m_showInfo=true;
+    int                               m_benchFrame=0;
     int                               m_width=100;
     int                               m_height=100;
     int                               m_genCount=0;

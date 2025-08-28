@@ -41,18 +41,23 @@ void  HephGui::callbackWindowSize(GLFWwindow* window, int width, int height) {
 
 void  HephGui::callbackKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
   if (key == GLFW_KEY_ESCAPE) {
+		m_quit = true;
   }
 
   if (key == GLFW_KEY_F5 && action == GLFW_PRESS) {
   }
 
+  if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+    m_cellspace.getGrid().benchmark(20);
+  }
+  if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+    m_cellspace.getGrid().toggleShowInfo();
+  }
   if (key == GLFW_KEY_E && action == GLFW_PRESS) {
     m_cellspace.getGrid().nextGen();
-    //m_factoryEditor.export();
   }
   if (key == GLFW_KEY_R && action == GLFW_PRESS) {
     m_cellspace.toggleAutoGen();
-    //m_factoryEditor.export();
   }
 
 	if (mods & GLFW_MOD_CONTROL && key == GLFW_KEY_Q) {
@@ -176,6 +181,7 @@ void  HephGui::run() {
 
   while(!glfwWindowShouldClose(m_mainWindow) && !m_quit) {
 		double now = glfwGetTime();
+    m_time=now;
 		double deltaTime = now - lastUpdateTime;
     glfwPollEvents();
     HEPH_PRINT_RESULT(render());
@@ -183,6 +189,7 @@ void  HephGui::run() {
 			//std::cout << "expect: " <<  m_framerate << "delta: " << deltaTime << std::endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uint32_t>(1000.0 * (m_framerate - deltaTime))));
 		}
+    m_prevTime=m_time;
 		lastUpdateTime = now;
   }
 }
@@ -193,6 +200,7 @@ HephResult	HephGui::renderGui() {
 	ImGui::NewFrame();
 
 	drawTopBar();
+  m_cellspace.getGrid().drawInfo(m_time, m_prevTime);
   updateLayout();
 
 	return (HephResult());
