@@ -1,16 +1,11 @@
 #pragma once
+#include "QuadTree.hpp"
 #include "RuleSet.hpp"
 #include "Cell.hpp"
 #include <hephaestus/memory/hephMemoryAllocator.hpp>
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
-
-
-struct Vertex{
-  glm::vec2 pos;
-  glm::vec3 color;
-};
 
 struct Bench{
   int           startBenchTime=0;
@@ -41,9 +36,11 @@ class CellGrid{
     void                applyRuleSet(Cell& cell, std::vector<Cell> grid, RuleSet& ruleset);
 
     void                draw(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri);
+    void                drawQuadTree(std::vector<Vertex>& vertices, std::vector<int>& indices, int index);
     void                drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri, int x, int y);
     void                drawInfo(double& time, double& prevTime);
     void                toggleShowInfo(){m_showInfo=(m_showInfo)?false:true;}
+    bool                getShowInfo(){return m_showInfo;}
     void                benchmark(double& time, int nbFrame, std::string benchFilePath="");
     void                benchAddFrame(double& time, double& prevTime);
 
@@ -64,8 +61,9 @@ class CellGrid{
     int                               m_width=100;
     int                               m_height=100;
     int                               m_genCount=0;
-    std::shared_ptr<RuleSet>          m_ruleset;
     std::vector<Cell>                 m_cells;
     std::vector<Cell>                 m_prevCells;
     std::vector<glm::ivec2>           m_liveCells;
+    std::shared_ptr<RuleSet>          m_ruleset;
+    std::shared_ptr<QuadTree>         m_quadtree;
 };

@@ -5,42 +5,87 @@
 #include <vulkan/vulkan_core.h>
 
 
-bool CellSpace::drawCellGrid(){
+pipelineBinding CellSpace::drawCellGrid(){
   if (m_verticesTri.size() || m_indicesTri.size()) {
     vkDeviceWaitIdle(m_device.device);
     m_memoryAllocator.destroyBuffer(m_indexBufferTri);
     m_memoryAllocator.destroyBuffer(m_vertexBufferTri);
   }
-
+  if(m_verticesLine.size() || m_indicesLine.size()){
+    vkDeviceWaitIdle(m_device.device);
+    m_memoryAllocator.destroyBuffer(m_indexBufferLine);
+    m_memoryAllocator.destroyBuffer(m_vertexBufferLine);
+  }
   m_verticesTri.clear();
   m_indicesTri.clear();
+  m_verticesLine.clear();
+  m_indicesLine.clear();
   
+  /*
+  double cH=2.0/90;
+  double cW=2.0/160;
+  Vertex v={
+    .pos=glm::vec2(0*cW-1, 0*cH-1),
+    .color=glm::vec3(1,1,1)
+  };
+  m_verticesLine.push_back(v);
+  v.pos.x+=cW*20;
+  m_verticesLine.push_back(v);
+  v.pos.y+=cH*20;
+  m_verticesLine.push_back(v);
+  v.pos.x-=cW*20;
+  m_verticesLine.push_back(v);
+  m_indicesLine.push_back(0);
+  m_indicesLine.push_back(1);
+  m_indicesLine.push_back(1);
+  m_indicesLine.push_back(2);
+  m_indicesLine.push_back(2);
+  m_indicesLine.push_back(3);
+  m_indicesLine.push_back(3);
+  m_indicesLine.push_back(0);
+  */
+
+  drawGrid();
   m_cellgrid.draw(m_verticesTri, m_indicesTri);
+  m_cellgrid.drawQuadTree(m_verticesLine, m_indicesLine, m_verticesLine.size());
   if(m_autoGen)
     m_cellgrid.nextGen();
 
+
+  bool bindTri=false;
+  bool bindLine=false;
+
   size_t  sizeV = m_verticesTri.size() * sizeof(Vertex);
   size_t  sizeI = m_indicesTri.size() * sizeof(uint32_t);
-
-  if(sizeV==0 || sizeI==0)
-    return false;
-
   HephBufferCreateInfo createInfoV = {
-    .size = sizeV,
     .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
   };
-  m_memoryAllocator.createBuffer(createInfoV, m_vertexBufferTri);
-  m_memoryAllocator.stagingMakeAndCopy(m_vertexBufferTri, m_verticesTri.data(), sizeV, m_commandPool);
   HephBufferCreateInfo createInfoI = {
-    .size = sizeI,
     .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
   };
-  m_memoryAllocator.createBuffer(createInfoI, m_indexBufferTri);
-  m_memoryAllocator.stagingMakeAndCopy(m_indexBufferTri, m_indicesTri.data(), sizeI, m_commandPool);
-
-  return true;
+  if(sizeV!=0 && sizeI!=0){
+    createInfoV.size = sizeV,
+    createInfoI.size = sizeI,
+    m_memoryAllocator.createBuffer(createInfoV, m_vertexBufferTri);
+    m_memoryAllocator.stagingMakeAndCopy(m_vertexBufferTri, m_verticesTri.data(), sizeV, m_commandPool);
+    m_memoryAllocator.createBuffer(createInfoI, m_indexBufferTri);
+    m_memoryAllocator.stagingMakeAndCopy(m_indexBufferTri, m_indicesTri.data(), sizeI, m_commandPool);
+    bindTri=true;
+  }
+  sizeV = m_verticesLine.size() * sizeof(Vertex);
+  sizeI = m_indicesLine.size() * sizeof(uint32_t);
+  if(sizeV!=0 && sizeI!=0){
+    createInfoV.size=sizeV;
+    createInfoI.size=sizeI;
+    m_memoryAllocator.createBuffer(createInfoV, m_vertexBufferLine);
+    m_memoryAllocator.stagingMakeAndCopy(m_vertexBufferLine, m_verticesLine.data(), sizeV, m_commandPool);
+    m_memoryAllocator.createBuffer(createInfoI, m_indexBufferLine);
+    m_memoryAllocator.stagingMakeAndCopy(m_indexBufferLine, m_indicesLine.data(), sizeI, m_commandPool);
+    bindLine=true;
+  }
+  return {bindTri, bindLine};
 }
 
 void CellSpace::destroy(){
@@ -55,23 +100,23 @@ void CellSpace::destroy(){
 }
 
 HephResult  CellSpace::cmdBufferRecord(VkCommandBuffer& cmdBuffer, VkViewport& viewport){
+  auto bind=drawCellGrid();
+
   VkDeviceSize offsets[] = {0};
-  vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLine);
-  vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferLine.buffer, offsets);
-  vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferLine.buffer, 0, VK_INDEX_TYPE_UINT32);
-  vkCmdDrawIndexed(cmdBuffer, m_indicesLine.size(), 1, 0, 0, 0);
-
-  if(!drawCellGrid())
-    return HephResult();
-  vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineTri);
-  vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferTri.buffer, offsets);
-  vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferTri.buffer, 0, VK_INDEX_TYPE_UINT32);
-  vkCmdDrawIndexed(cmdBuffer, m_indicesTri.size(), 1, 0, 0, 0);
-
+  if(bind.bindLine){
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLine);
+    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferLine.buffer, offsets);
+    vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferLine.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(cmdBuffer, m_indicesLine.size(), 1, 0, 0, 0);
+  }
+  if(bind.bindTri){
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineTri);
+    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &m_vertexBufferTri.buffer, offsets);
+    vkCmdBindIndexBuffer(cmdBuffer, m_indexBufferTri.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(cmdBuffer, m_indicesTri.size(), 1, 0, 0, 0);
+  }
   return HephResult();
 }
 
@@ -267,14 +312,12 @@ HephResult	CellSpace::createPipeline() {
   HEPH_CHECK_RESULT(HephResult(vkCreateGraphicsPipelines(m_device.device, VK_NULL_HANDLE, 1,
         &pipelineInfo, nullptr, &m_pipelineLine), "failed to create graphics pipeline!"));
 
-  createGridBuffer();
-
 	vertShaderModule.destroy(m_device);
 	fragShaderModule.destroy(m_device);
 	return (HephResult());
 }
 
-void CellSpace::createGridBuffer(){
+void CellSpace::drawGrid(){
   int gridW=m_cellgrid.getWidth();
   int gridH=m_cellgrid.getHeight();
   Vertex v={
@@ -305,23 +348,4 @@ void CellSpace::createGridBuffer(){
     m_indicesLine.push_back(nbVertex+1);
     nbVertex+=2;
   }
-
-  size_t  sizeV = m_verticesLine.size() * sizeof(Vertex);
-  size_t  sizeI = m_indicesLine.size() * sizeof(uint32_t);
-
-  HephBufferCreateInfo createInfoV = {
-    .size = sizeV,
-    .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-  };
-  m_memoryAllocator.createBuffer(createInfoV, m_vertexBufferLine);
-  m_memoryAllocator.stagingMakeAndCopy(m_vertexBufferLine, m_verticesLine.data(), sizeV, m_commandPool);
-  HephBufferCreateInfo createInfoI = {
-    .size = sizeI,
-    .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-    .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-  };
-  m_memoryAllocator.createBuffer(createInfoI, m_indexBufferLine);
-  m_memoryAllocator.stagingMakeAndCopy(m_indexBufferLine, m_indicesLine.data(), sizeI, m_commandPool);
-
 }

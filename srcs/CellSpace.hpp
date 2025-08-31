@@ -8,6 +8,12 @@
 #include <hephaestus/memory/hephMemoryAllocator.hpp>
 #include <vulkan/vulkan_core.h>
 
+
+struct pipelineBinding{
+  bool bindTri;
+  bool bindLine;
+};
+
 class CellSpace{
   public:
     CellSpace(){
@@ -15,19 +21,20 @@ class CellSpace{
       //m_cellgrid.loadRLEat(0, 0, "./life_patterns/newgun.rle");
     }
 
-    bool        drawCellGrid();
-    HephResult  cmdBufferRecord(VkCommandBuffer& cmdBuffer, VkViewport& viewport);
-    HephResult  setDevice(VkRenderPass& renderPass, HephDevice& device);
-    CellGrid&   getGrid(){return m_cellgrid;}
-    void        destroy();
-    void        toggleAutoGen(){m_autoGen=(m_autoGen)?false:true;}
-    void        setAutoGen(bool autogen){m_autoGen=autogen;}
+    pipelineBinding   drawCellGrid();
+    HephResult        cmdBufferRecord(VkCommandBuffer& cmdBuffer, VkViewport& viewport);
+    HephResult        setDevice(VkRenderPass& renderPass, HephDevice& device);
+    CellGrid&         getGrid(){return m_cellgrid;}
+    void              destroy();
+    void              toggleAutoGen(){m_autoGen=(m_autoGen)?false:true;}
+    void              setAutoGen(bool autogen){m_autoGen=autogen;}
+    bool              getAutoGen(){return m_autoGen;}
 
   protected:
     
     HephResult	createPipeline();
     HephResult	createPipelineLine();
-    void        createGridBuffer();
+    void        drawGrid();
 
     SubSpace                  m_root;
 

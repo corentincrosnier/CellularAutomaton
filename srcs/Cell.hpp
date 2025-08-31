@@ -12,8 +12,15 @@
 #define CELL_STATE_4 4
 #define CELL_STATE_5 5
 
+
+struct Vertex{
+  glm::vec2 pos;
+  glm::vec3 color;
+};
+
 struct Cell{
-  Cell(int x, int y, int state=CELL_STATE_0){
+
+  Cell(int x=0, int y=0, int state=CELL_STATE_0){
     pos=glm::ivec2(x,y);
     this->state=state;
   }

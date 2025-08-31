@@ -11,6 +11,7 @@
 #include <fstream>
 #include <glm/fwd.hpp>
 #include <hephaestus/memory/hephMemoryAllocator.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 #include "imgui_impl_glfw.h"
@@ -20,73 +21,6 @@
 #define HEIGHT  90
 
 
-void CellGrid::benchmark(double& time, int nbFrame, std::string benchFilePath){
-  if(m_bench.active){
-    std::cout << "Another benchmark still in progress." << std::endl;
-    return;
-  }
-  m_bench.filePath=benchFilePath;
-  m_bench.nbFrame=nbFrame;
-  m_bench.frame=nbFrame;
-  m_bench.startBenchTime=time;
-  m_bench.fps=0;
-  m_bench.gridSize=m_cells.size();
-  m_bench.cellCount=0;
-  m_bench.genCount=0;
-  m_bench.genPeriod=0;
-  m_bench.periodPerCell=0;
-  m_bench.periodPerLiveCell=0;
-  m_bench.active=true;
-  std::cout<<"benchmark "<<nbFrame<<" frames...\n";
-}
-
-void CellGrid::benchAddFrame(double& _time, double& prevTime){
-  double delta=_time-prevTime;
-  m_bench.cellCount+=m_liveCells.size();
-  m_bench.genCount++;
-  m_bench.fps+=1/delta;
-  m_bench.genPeriod+=delta;
-  m_bench.periodPerCell+=1000*delta/m_bench.gridSize;
-  m_bench.periodPerLiveCell+=1000*delta/m_liveCells.size();
-  m_bench.frame--;
-  if(m_bench.frame<=0){
-    std::ofstream benchOut(m_bench.filePath, std::ofstream::app);
-    if(benchOut.is_open()){
-      time_t ts=time(NULL);
-      benchOut<<"-------------------------------------------------------------\n";
-      benchOut<<"Benchmark on "<<m_bench.nbFrame<<" frames\n";
-      benchOut<<"Date and time: "<<ctime(&ts)<<"\n";
-      benchOut<<"Elapsed time: "<<_time-m_bench.startBenchTime<<" seconds\n";
-      benchOut<<std::endl;
-      benchOut<<"gen count:               "<<m_bench.genCount<<"\n";
-      benchOut<<"grid size:               "<<m_bench.gridSize<<"\n";
-      benchOut<<"cell count:             ~"<<m_bench.cellCount/m_bench.nbFrame<<"\n";
-      benchOut<<std::endl;
-      benchOut<<"fps:                    ~"<<m_bench.fps/m_bench.nbFrame<<"\n";
-      benchOut<<"gen period:             ~"<<m_bench.genPeriod/m_bench.nbFrame<<" seconds\n";
-      benchOut<<"period per cell:        ~"<<m_bench.periodPerCell/m_bench.nbFrame<<" milliseconds\n";
-      benchOut<<"period per live cell:   ~"<<m_bench.periodPerLiveCell/m_bench.nbFrame<<" milliseconds\n";
-      benchOut<<std::endl;
-    }
-    benchOut.close();
-    std::cout << "Benchmark done.\n";
-    m_bench.active=false;
-  }
-}
-
-void CellGrid::drawInfo(double& time, double& prevTime){
-  if(m_bench.active)
-    benchAddFrame(time,prevTime);
-  if(!m_showInfo)
-    return;
-  ImGui::Text("fps: %f", 1/(time-prevTime));
-  ImGui::Text("genPeriod: %f%s", (time-prevTime), " s");
-  ImGui::Text("genCount: %i", m_genCount);
-  ImGui::Text("gridSize: %i", (int)m_cells.size());
-  ImGui::Text("cellCount: %i", (int)m_liveCells.size());
-  ImGui::Text("periodPerCell: %f%s",1000*(time-prevTime)/m_cells.size(), " ms");
-  ImGui::Text("periodPerLiveCell: %f%s",1000*(time-prevTime)/m_liveCells.size(), " ms");
-}
 
 CellGrid::CellGrid(int width, int height){
   //m_width=width;
@@ -98,22 +32,18 @@ CellGrid::CellGrid(int width, int height){
       m_cells.push_back(Cell(i,j));
     }
   }
-  //setState(8, 4 , 1);
+  m_quadtree=std::make_shared<QuadTree>();
+  /*
+  setState(8, 4 , 1);
+  m_quadtree->addCellAt(glm::ivec2(8,4));
+  setState(12, 4 , 1);
+  m_quadtree->addCellAt(glm::ivec2(12,4));
+  setState(100, 30 , 1);
+  m_quadtree->addCellAt(glm::ivec2(100,30));
+  */
   m_ruleset=CAParser::parseCA("./gol.ca");
-  loadRLEat(0, 0, "./life_patterns/newgun.rle");
-  loadRLEat(40, 10, "./life_patterns/34p20.rle");
-}
-
-void CellGrid::setState(int x, int y, int state){
-  auto it=std::find(m_liveCells.begin(), m_liveCells.end(), glm::ivec2(x,y));
-  if(it==m_liveCells.end() && state>0){
-    m_liveCells.push_back(glm::ivec2(x,y));
-  }
-  else if(it!=m_liveCells.end() && state==CELL_STATE_0){
-    m_liveCells.erase(it);
-  }
-  //std::cout << "setting " << x << "," << y << " state to" << state << std::endl;
-  m_cells[y*m_width+x].state=state;
+  //loadRLEat(0, 0, "./life_patterns/newgun.rle");
+  //loadRLEat(40, 10, "./life_patterns/34p20.rle");
 }
 
 void CellGrid::loadRLEat(int x, int y, std::string rlepath){
@@ -135,7 +65,6 @@ void CellGrid::loadRLEat(int x, int y, std::string rlepath){
       break;
     }
     int ind=(y+_y)*m_width+x+_x;
-    //std::cout << _x << "," << _y << std::endl;
     if(c=='#' || c=='@'){
       std::getline(rle,s);
       continue;
@@ -177,9 +106,12 @@ void CellGrid::loadRLEat(int x, int y, std::string rlepath){
 }
 
 void CellGrid::nextGen(){
-  //std::cout << "calc next gen using ruleset wireworld\n";
-  m_prevCells=m_cells;
+  m_quadtree->nextGen();
+}
 
+/*
+void CellGrid::nextGen(){
+  m_prevCells=m_cells;
   if(m_ruleset!=nullptr){
     for(auto& c: m_cells)
       applyRuleSet(c, m_prevCells, *m_ruleset);
@@ -190,23 +122,17 @@ void CellGrid::nextGen(){
   }
   m_genCount++;
 }
+*/
 
 void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, RuleSet& ruleset){
-  //std::cout << "applyRuleSet\n";
-  //std::cout<<"applying ruleset to cell: ("<<cell.pos.x<<","<<cell.pos.y<<")\n";
   std::vector<int> tally;
-  for(int i=0;i<ruleset.stateCount;i++){
+  for(int i=0;i<ruleset.stateCount;i++)
     tally.push_back(0);
-  }
-  //std::cout << "tally size: "<<tally.size()<<std::endl;
 
-  int i=0;
   for(auto& r: ruleset.regions){
-    //std::cout<<"start tally region: "<<i<<std::endl;
     for(auto& rel: r.relativeCells){
       int x=cell.pos.x + rel.x;
       int y=cell.pos.y + rel.y;
-      //std::cout<<"checking cell: ("<<x<<","<<y<<")\n";
       if(x<0 || x>=m_width || y<0 || y>=m_height){
         tally[0]++;
         continue;
@@ -215,24 +141,13 @@ void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, RuleSet& ruleset
     }
   }
 
-  /*
-  i=0;
-  for(auto t: tally)
-    std::cout<<"tally["<<i<<"] = "<<t<<std::endl;
-  */
   for(auto& t: ruleset.transitions){
     if(cell.state!=t.stateStartId)
       continue;
     if(t.satisfy(tally)){
-      //std::cout << "cell satisfied for transition, state set to: "<<t.stateEndId<<std::endl;
-      //cell.state=t.stateEndId;
       setState(cell.pos.x, cell.pos.y, t.stateEndId);
-      //TODO--------------------- method void updateLiveCells(Cell& cell)
-      //if(cell.state==0)
-      //  m_liveCells.erase(std::find(m_liveCells.begin(), m_liveCells.end(), cell.pos));
       break;
     }
-
   }
 }
 
@@ -276,6 +191,19 @@ void CellGrid::applyRuleSet(Cell& cell, std::vector<Cell> grid, int range){
   }
 }
 
+void CellGrid::setState(int x, int y, int state){
+  auto it=std::find(m_liveCells.begin(), m_liveCells.end(), glm::ivec2(x,y));
+  if(it==m_liveCells.end() && state>0){
+    m_liveCells.push_back(glm::ivec2(x,y));
+    m_quadtree->addCellAt(glm::ivec2(x,y));
+  }
+  else if(it!=m_liveCells.end() && state==CELL_STATE_0){
+    m_liveCells.erase(it);
+    m_quadtree->deleteCellAt(glm::ivec2(x,y));
+  }
+  m_cells[y*m_width+x].state=state;
+}
+
 void CellGrid::activateCell(int x, int y){
   m_cells[y*m_width+x].state=CELL_STATE_1;
   m_liveCells.push_back(glm::ivec2(x,y));
@@ -283,13 +211,7 @@ void CellGrid::activateCell(int x, int y){
 
 void CellGrid::switchCell(int x, int y){
   int ind=y*m_width+x;
-  Cell& c=m_cells[ind];
-  int prevState=c.state;
-  c.state=(c.state+1)%m_ruleset->stateCount;
-  if(prevState==0 && c.state!=0)
-    m_liveCells.push_back(c.pos);
-  else if(prevState!=0 && c.state==0)
-    m_liveCells.erase(std::find(m_liveCells.begin(), m_liveCells.end(), c.pos));
+  setState(x,y,(m_cells[ind].state+1)%m_ruleset->stateCount);
 }
 
 void CellGrid::drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri, int x, int y){
@@ -301,7 +223,6 @@ void CellGrid::drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indi
     .pos=glm::vec2(x*cellW-1,y*cellH-1),
     .color=glm::vec3(0.3+st*0.2,0.3+st*0.2,0.3+st*0.2)
   };
-  //std::cout << x << " , " << y << std::endl << cellSize << " : " << nbVertex << std::endl;
   verticesTri.push_back(v);
   v.pos.x+=cellW;
   verticesTri.push_back(v);
@@ -315,15 +236,84 @@ void CellGrid::drawCell(std::vector<Vertex>& verticesTri, std::vector<int>& indi
   indicesTri.push_back(nbVertex+1);
   indicesTri.push_back(nbVertex+2);
   indicesTri.push_back(nbVertex+3);
-
 }
 
 void CellGrid::draw(std::vector<Vertex>& verticesTri, std::vector<int>& indicesTri){
   for(auto i: m_liveCells){
     Cell c=m_cells[i.y*m_width+i.x];
-    //std::cout << c.pos.x << " , " << c.pos.y << "  :  " << c.state << std::endl;
     drawCell(verticesTri, indicesTri, c.pos.x, c.pos.y);
   }
+}
 
+void CellGrid::drawQuadTree(std::vector<Vertex>& vertices, std::vector<int>& indices, int index){
+  m_quadtree->draw(vertices, indices, index);
+}
+
+void CellGrid::benchAddFrame(double& _time, double& prevTime){
+  double delta=_time-prevTime;
+  m_bench.cellCount+=m_liveCells.size();
+  m_bench.genCount++;
+  m_bench.fps+=1/delta;
+  m_bench.genPeriod+=delta;
+  m_bench.periodPerCell+=1000*delta/m_bench.gridSize;
+  m_bench.periodPerLiveCell+=1000*delta/m_liveCells.size();
+  m_bench.frame--;
+  if(m_bench.frame<=0){
+    std::ofstream benchOut(m_bench.filePath, std::ofstream::app);
+    if(benchOut.is_open()){
+      time_t ts=time(NULL);
+      benchOut<<"-------------------------------------------------------------\n";
+      benchOut<<"Benchmark on "<<m_bench.nbFrame<<" frames\n";
+      benchOut<<"Date and time: "<<ctime(&ts)<<"\n";
+      benchOut<<"Elapsed time: "<<_time-m_bench.startBenchTime<<" seconds\n";
+      benchOut<<std::endl;
+      benchOut<<"gen count:               "<<m_bench.genCount<<"\n";
+      benchOut<<"grid size:               "<<m_bench.gridSize<<"\n";
+      benchOut<<"cell count:             ~"<<m_bench.cellCount/m_bench.nbFrame<<"\n";
+      benchOut<<std::endl;
+      benchOut<<"fps:                    ~"<<m_bench.fps/m_bench.nbFrame<<"\n";
+      benchOut<<"gen period:             ~"<<m_bench.genPeriod/m_bench.nbFrame<<" seconds\n";
+      benchOut<<"period per cell:        ~"<<m_bench.periodPerCell/m_bench.nbFrame<<" milliseconds\n";
+      benchOut<<"period per live cell:   ~"<<m_bench.periodPerLiveCell/m_bench.nbFrame<<" milliseconds\n";
+      benchOut<<std::endl;
+    }
+    benchOut.close();
+    std::cout << "Benchmark done.\n";
+    m_bench.active=false;
+  }
+}
+
+void CellGrid::benchmark(double& time, int nbFrame, std::string benchFilePath){
+  if(m_bench.active){
+    std::cout << "Another benchmark still in progress." << std::endl;
+    return;
+  }
+  m_bench.filePath=benchFilePath;
+  m_bench.nbFrame=nbFrame;
+  m_bench.frame=nbFrame;
+  m_bench.startBenchTime=time;
+  m_bench.fps=0;
+  m_bench.gridSize=m_cells.size();
+  m_bench.cellCount=0;
+  m_bench.genCount=0;
+  m_bench.genPeriod=0;
+  m_bench.periodPerCell=0;
+  m_bench.periodPerLiveCell=0;
+  m_bench.active=true;
+  std::cout<<"benchmark "<<nbFrame<<" frames...\n";
+}
+
+void CellGrid::drawInfo(double& time, double& prevTime){
+  if(m_bench.active)
+    benchAddFrame(time,prevTime);
+  if(!m_showInfo)
+    return;
+  ImGui::Text("fps: %f", 1/(time-prevTime));
+  ImGui::Text("genPeriod: %f%s", (time-prevTime), " s");
+  ImGui::Text("genCount: %i", m_genCount);
+  ImGui::Text("gridSize: %i", (int)m_cells.size());
+  ImGui::Text("cellCount: %i", (int)m_liveCells.size());
+  ImGui::Text("periodPerCell: %f%s",1000*(time-prevTime)/m_cells.size(), " ms");
+  ImGui::Text("periodPerLiveCell: %f%s",1000*(time-prevTime)/m_liveCells.size(), " ms");
 }
 

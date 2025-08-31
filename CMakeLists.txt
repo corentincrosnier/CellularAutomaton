@@ -20,6 +20,7 @@ set(cpps
   srcs/CellGrid.cpp
   srcs/RuleSet.cpp
   srcs/CAParser.cpp
+  srcs/QuadTree.cpp
   #srcs/Cell.cpp
 
   srcs/HephGuiSetup.cpp
@@ -32,6 +33,7 @@ set(hpps
   srcs/Cell.hpp
   srcs/RuleSet.hpp
   srcs/CAParser.hpp
+  srcs/QuadTree.hpp
 
   srcs/guiInfo.hpp
   srcs/HephGui.hpp

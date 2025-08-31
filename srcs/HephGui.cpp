@@ -74,6 +74,8 @@ void  HephGui::callbackCursor(GLFWwindow* window, double xpos, double ypos) {
 }
 
 void  HephGui::callbackMouseButton(GLFWwindow* window, int button, int action, int mod) {
+  if(m_cellspace.getGrid().getShowInfo())
+    return;
   if (button == GLFW_MOUSE_BUTTON_1) {
     if (action == GLFW_PRESS) {
       double xpos, ypos;
